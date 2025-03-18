@@ -1,0 +1,39 @@
+version: "3"
+
+services:
+  nginx:
+    image: nginx:alpine
+    container_name: nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - ./www:/var/www/html:rw
+    networks:
+      - php-network
+    depends_on:
+      - php74
+      - php82
+
+  php74:
+    build: ./php/7.4
+    container_name: php74
+    volumes:
+      - ./www:/var/www/html:rw
+    networks:
+      - php-network
+
+  php82:
+    build: ./php/8.2
+    container_name: php82
+    volumes:
+      - ./www:/var/www/html:rw
+    networks:
+      - php-network
+
+networks:
+  php-network:
+    driver: bridge

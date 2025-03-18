@@ -1,0 +1,54 @@
+FROM php:7.4-fpm-alpine
+
+# 安装系统依赖
+RUN apk add --no-cache \
+    libpng-dev \
+    libjpeg-turbo-dev \
+    libzip-dev \
+    postgresql-dev \
+	curl \
+	git \
+	unzip \
+    $PHPIZE_DEPS
+
+# 安装核心扩展
+RUN docker-php-ext-configure gd --with-jpeg \
+    && docker-php-ext-install -j$(nproc) \
+        pdo_mysql \
+        pdo_pgsql \
+        gd \
+        zip \
+        bcmath \
+		exif \
+		pcntl \
+		opcache \
+		sockets 
+
+# 通过环境变量覆盖配置
+ENV PHP_OPCACHE_ENABLE=0 \
+    PHP_OPCACHE_ENABLE_CLI=0
+
+# 安装 PECL 扩展
+RUN pecl install redis-5.3.7 \
+    && docker-php-ext-enable redis
+
+# 安装 Composer（验证签名版）
+RUN curl -sS https://getcomposer.org/installer | php -- \
+    --install-dir=/usr/local/bin \
+    --filename=composer \
+    --version=2.6.6 \
+    --quiet \
+    && composer --ansi --version --no-interaction
+
+# 验证安装
+RUN composer diagnose
+
+# 清理构建缓存
+RUN rm -rf /tmp/pear \
+    && apk del $PHPIZE_DEPS
+
+# 设置时区
+RUN apk add tzdata \
+    && cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
+	
+WORKDIR /var/www/html
